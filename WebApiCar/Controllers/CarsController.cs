@@ -1,24 +1,27 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using WebApiCar.Model;
 
 namespace WebApiCar.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class CarsController : ControllerBase
     {
+        string link = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=CarDB;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
+
         public static List<Car> carList = new List<Car>()
         {
-            new Car(){Id = 1,Model="x3",Vendor="Tesla", Price=400000},
-            new Car(){Id = 2,Model="x2",Vendor="Tesla", Price=600000},
-            new Car(){Id = 3,Model="x1",Vendor="Tesla", Price=800000},
-            new Car(){Id = 4,Model="x0",Vendor="Tesla", Price=1400000},
+            new Car() {Id = 1, Model = "x3", Vendor = "Tesla", Price = 400000},
+            new Car() {Id = 2, Model = "x2", Vendor = "Tesla", Price = 600000},
+            new Car() {Id = 3, Model = "x1", Vendor = "Tesla", Price = 800000},
+            new Car() {Id = 4, Model = "x0", Vendor = "Tesla", Price = 1400000},
         };
+
+
 
         /// <summary>
         /// Method for get all the cars from the static list
@@ -28,7 +31,40 @@ namespace WebApiCar.Controllers
         [HttpGet]
         public IEnumerable<Car> Get()
         {
+            List<Car> listOfCars = new List<Car>();
+
+            String selectAllCars = "Select id, vendor, model, price from Car";
+
+            using (SqlConnection dataBaseConnection = new SqlConnection(link))
+            {
+                dataBaseConnection.Open();
+                using (SqlCommand selectCommand = new SqlCommand(selectAllCars, dataBaseConnection))
+                {
+                    using (SqlDataReader reader = selectCommand.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            int id = reader.GetInt32(0);
+                            string vendor = reader.GetString(1);
+                            string model = reader.GetString(2);
+                            int price = reader.GetInt32(3);
+
+                            Car newCar = new Car(id,vendor,model,price);
+
+                            listOfCars.Add(newCar);
+                        }
+                    }
+                }
+            }
+
+            return listOfCars;
+        }
+
+        [HttpGet ("byvendor/{vendor}")]
+        public IEnumerable<Car> GetByVendor(string vendor)
+        {
             return carList;
+;
         }
 
         // GET: api/Cars/5
@@ -63,10 +99,10 @@ namespace WebApiCar.Controllers
             carList.Remove(Get(id));
         }
 
-       int GetId()
+        int GetId()
         {
             int max = carList.Max(x => x.Id);
-            return max+1;
+            return max + 1;
         }
 
     }
