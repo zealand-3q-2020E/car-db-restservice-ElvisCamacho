@@ -49,8 +49,7 @@ namespace WebApiCar.Controllers
                             string model = reader.GetString(2);
                             int price = reader.GetInt32(3);
 
-                            Car newCar = new Car(id,vendor,model,price);
-
+                            Car newCar = new Car(id, vendor, model, price);
                             listOfCars.Add(newCar);
                         }
                     }
@@ -60,18 +59,43 @@ namespace WebApiCar.Controllers
             return listOfCars;
         }
 
-        [HttpGet ("byvendor/{vendor}")]
+        [HttpGet("byvendor/{vendor}")]
         public IEnumerable<Car> GetByVendor(string vendor)
         {
             return carList;
-;
         }
 
         // GET: api/Cars/5
         [HttpGet("{id}", Name = "Get")]
         public Car Get(int id)
         {
-            return carList.FirstOrDefault(x => x.Id == id);
+            String selectById = "select id, vendor, model, price from car where id=@id";
+
+            using (SqlConnection dataBaseConnection = new SqlConnection(link))
+            {
+                using (SqlCommand selectedCommand = new SqlCommand(selectById, dataBaseConnection))
+                {
+                    selectedCommand.Parameters.AddWithValue("@id", id);
+                    dataBaseConnection.Open();
+                    using (SqlDataReader reader = selectedCommand.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            int id1 = reader.GetInt32(0);
+                            string vendor = reader.GetString(1);
+                            string model = reader.GetString(2);
+                            int price = reader.GetInt32(3);
+
+                            Car newCar = new Car(id1, vendor, model, price);
+                            return newCar;
+
+                        }
+                    }
+                }
+            }
+            return null;
+
+            //return carList.FirstOrDefault(x => x.Id == id);
         }
 
         /// <summary>
@@ -82,22 +106,68 @@ namespace WebApiCar.Controllers
         [HttpPost]
         public void Post([FromBody] Car value)
         {
+            string insertSql =
+           "insert into car(id, model, vendor, price) values(@id, @model, @vendor, @price)";
+
+            using (SqlConnection dataBaseConnection = new SqlConnection(link))
+            {
+                dataBaseConnection.Open();
+                using (SqlCommand insertCommand = new SqlCommand(insertSql, dataBaseConnection))
+                {
+                    insertCommand.Parameters.AddWithValue("@id", value.Id);
+                    insertCommand.Parameters.AddWithValue("@model", value.Model);
+                    insertCommand.Parameters.AddWithValue("@vendor", value.Vendor);
+                    insertCommand.Parameters.AddWithValue("@Price", value.Price);
+
+                    var rowsAffected = insertCommand.ExecuteNonQuery();
+                    Console.WriteLine($"Rows affected: {rowsAffected}");
+
+                }
+            }
+
+
             Car newcar = new Car() { Id = GetId(), Model = value.Model, Vendor = value.Vendor, Price = value.Price };
             carList.Add(newcar);
         }
 
+
+
         // PUT: api/Cars/5
         [HttpPut("{id}")]
-        public void Put(int id, [FromBody] Car value)
+        public void Put(int id, [FromBody] Car car)
         {
+            string query = "Update car set id=@id ,vendor=@vendor, model=@model, price=@price  where id=@id";
+            using (SqlConnection conn = new SqlConnection(link))
+            {
+                conn.Open();
+                SqlCommand command = new SqlCommand(query, conn);
+                command.Parameters.AddWithValue("@id", car.Id);
+                command.Parameters.AddWithValue("@model", car.Model);
+                command.Parameters.AddWithValue("@vendor", car.Vendor);
+                command.Parameters.AddWithValue("@price", car.Vendor);
+                int affectedRows = command.ExecuteNonQuery();
+            }
         }
 
         // DELETE: api/ApiWithActions/5
         [HttpDelete("{id}")]
         public void Delete(int id)
         {
-            carList.Remove(Get(id));
+            string query = "delete from car where id=@id";
+            using (SqlConnection dataBaseConnection = new SqlConnection(link))
+            {
+                dataBaseConnection.Open();
+                using (SqlCommand insertCommand = new SqlCommand(query, dataBaseConnection))
+                {
+                    insertCommand.Parameters.AddWithValue("@id", id);
+
+                    var rowsAffected = insertCommand.ExecuteNonQuery();
+
+                }
+            }
+            //carList.Remove(Get(id));
         }
+
 
         int GetId()
         {
